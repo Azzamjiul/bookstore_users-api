@@ -7,6 +7,7 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -18,17 +19,21 @@ const (
 
 var (
 	Client *sql.DB
-
-	username = os.Getenv(mysql_users_username)
-	password = os.Getenv(mysql_users_password)
-	host     = os.Getenv(mysql_users_host)
-	database = os.Getenv(mysql_users_database)
 )
 
 func init() {
-	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, host, database)
+	err := godotenv.Load()
+	if err != nil {
+		panic("Error loading .env file")
+	}
 
-	var err error
+	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s)/%s",
+		os.Getenv(mysql_users_username),
+		os.Getenv(mysql_users_password),
+		os.Getenv(mysql_users_host),
+		os.Getenv(mysql_users_database),
+	)
+
 	Client, err = sql.Open("mysql", dataSourceName)
 	if err != nil {
 		panic(err)
