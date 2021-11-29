@@ -15,6 +15,7 @@ const (
 	queryInsertUser = "INSERT INTO users(first_name, last_name, email, date_created) VALUES (?, ?, ?, ?);"
 	queryGetUser    = "SELECT id, first_name, last_name, email, date_created FROM users WHERE id = ?;"
 	queryUpdateUser = "UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE id = ?;"
+	queryDeleteUser = "DELETE from users WHERE id = ?;"
 )
 
 func (user *User) Get() *errors.RestErr {
@@ -29,7 +30,7 @@ func (user *User) Get() *errors.RestErr {
 	result := stmt.QueryRow(user.Id)
 	if err := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated); err != nil {
 		if strings.Contains(err.Error(), errorNoRows) {
-			return errors.NewNotFoundError(fmt.Sprintf("user %d not founs", user.Id))
+			return errors.NewNotFoundError(fmt.Sprintf("user %d not found", user.Id))
 		}
 		fmt.Println(err)
 		return errors.NewInternalServerError(fmt.Sprintf("error when trying to get user %d : %s", user.Id, err.Error()))
@@ -73,8 +74,21 @@ func (user *User) Update() *errors.RestErr {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(user.FirstName, user.LastName, user.Email, user.Id)
+	if _, err = stmt.Exec(user.FirstName, user.LastName, user.Email, user.Id); err != nil {
+		return errors.NewInternalServerError(err.Error())
+	}
+
+	return nil
+}
+
+func (user *User) Delete() *errors.RestErr {
+	stmt, err := users_db.Client.Prepare(queryDeleteUser)
 	if err != nil {
+		return errors.NewInternalServerError(err.Error())
+	}
+	defer stmt.Close()
+
+	if _, err = stmt.Exec(user.Id); err != nil {
 		return errors.NewInternalServerError(err.Error())
 	}
 
