@@ -4,9 +4,11 @@ import (
 	"bookstore_users-api/domain/users"
 	"bookstore_users-api/services"
 	"bookstore_users-api/utils/errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/azzamjiul/bookstore_oauth-go/oauth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -41,6 +43,11 @@ func Create(c *gin.Context) {
 }
 
 func Get(c *gin.Context) {
+	if err := oauth.AuthenticateRequest(c.Request); err != nil {
+		c.JSON(err.Status, err)
+		return
+	}
+
 	userId, idErr := getUserId(c.Param("user_id"))
 	if idErr != nil {
 		c.JSON(idErr.Status, idErr)
@@ -53,7 +60,14 @@ func Get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user.Marshall(c.GetHeader("X-Public") == "true"))
+	fmt.Println(oauth.IsPublic(c.Request))
+
+	if oauth.GetCallerId(c.Request) == user.Id {
+		c.JSON(http.StatusOK, user.Marshall(false))
+		return
+	}
+
+	c.JSON(http.StatusOK, user.Marshall(oauth.IsPublic(c.Request)))
 }
 
 func Update(c *gin.Context) {
